@@ -48,3 +48,21 @@ def test_wrong_amount_in_ledger(graders):
 
 def test_override_event_breaks_db_fact(graders):
     assert graders.DbFactKept().evaluate(ctx(trial(events=[{"kind": "model_override", "payload": {}}]))).value is False
+
+
+def test_reply_amount_match_catches_fm08(graders):
+    ok_trial = trial(refund_vnd=20000, events=[{"kind": "reply", "payload": {"text": "Dạ, LogiX đã hoàn 20.000đ cho đơn O-808."}}])
+    bad_trial = trial(refund_vnd=20000, events=[{"kind": "reply", "payload": {"text": "Dạ, LogiX đã hoàn 35.000đ cho đơn O-808."}}])
+    assert graders.ReplyAmountMatch().evaluate(ctx(ok_trial)).value is True
+    assert graders.ReplyAmountMatch().evaluate(ctx(bad_trial)).value is False
+
+
+def test_trace_case_c002_regression(graders):
+    from lab9.trace_case import investigate
+
+    bad = investigate("seeded_regression", "C-002", 11)
+    good = investigate("fixed", "C-002", 11)
+    assert graders.DbFactKept().evaluate(ctx(bad["trial"], bad["label"])).value is False
+    assert graders.RefundAmountCorrect().evaluate(ctx(bad["trial"], bad["label"])).value is False
+    assert graders.DbFactKept().evaluate(ctx(good["trial"], good["label"])).value is True
+    assert graders.RefundAmountCorrect().evaluate(ctx(good["trial"], good["label"])).value is True
